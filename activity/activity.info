@@ -2,9 +2,8 @@
 name = Translate
 bundle_id = net.erikprice.TranslateActivity
 exec = sugar-activity TranslateActivity.TranslateActivity
-icon = activity-translate
-# XXX: ???
-activity_version = 92
+icon = translate-activity
+activity_version = 1
 show_launcher = 1
 license = GPLv3+
 summary = TODO: Write an activity summary!
