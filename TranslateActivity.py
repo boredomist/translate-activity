@@ -73,43 +73,66 @@ class TranslateActivity(activity.Activity):
         self.set_toolbar_box(toolbar_box)
         toolbar_box.show()
 
-        vbox = Gtk.Box(spacing=6)
-        hbox = Gtk.Box(spacing=6)
-        hbox.orientation = Gtk.Orientation.HORIZONTAL
+        # Main vertical layout of this window
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        # Text areas
+        text_hbox = Gtk.Box(spacing=6)
+        # Selection area (langs + translate button)
+        select_hbox = Gtk.Box(spacing=6)
 
-        button = Gtk.Button(_("Translate text"))
-        button.connect("clicked", self.on_translate_clicked)
-        vbox.pack_start(button, True, True, 0)
+        vbox.pack_start(select_hbox, False, True, 6)
+        vbox.pack_end(text_hbox, True, True, 0)
 
-        # This is so wrong.
+        select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 6)
+
+        self.lang_from = Gtk.ComboBoxText()
+        self.lang_from.connect("changed", self.on_lang_changed)
+        self.lang_from.set_entry_text_column(0)
+        select_hbox.pack_start(self.lang_from, False, False, 0)
+
+        select_hbox.pack_start(Gtk.Label(_("Translate to:")), False, False, 6)
+
+        self.lang_to = Gtk.ComboBoxText()
+        self.lang_to.connect("changed", self.on_lang_changed)
+        self.lang_to.set_entry_text_column(0)
+        select_hbox.pack_start(self.lang_to, False, False, 0)
+
+        for lang in ['these', 'are', 'fake', 'language', 'entries']:
+            self.lang_from.append_text(lang)
+            self.lang_to.append_text(lang)
+
+        button = Gtk.Button(_("Translate text!"))
+        select_hbox.pack_end(button, False, False, 6)
 
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_hexpand(False)
         scrolled_window.set_vexpand(True)
 
-        from_textview = Gtk.TextView()
-        from_textview.get_buffer().set_text("This is where you would type in \
+        self.text_from = Gtk.TextView()
+        self.text_from.get_buffer().set_text("This is where you would type in \
 some text to translate.")
 
-        scrolled_window.add(from_textview)
-        hbox.pack_start(scrolled_window, True, True, 0)
+        scrolled_window.add(self.text_from)
+        text_hbox.pack_start(scrolled_window, True, True, 0)
 
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_hexpand(False)
         scrolled_window.set_vexpand(True)
 
-        to_textview = Gtk.TextView()
-        to_textview.get_buffer().set_text("This is where the translated text \
+        self.text_to = Gtk.TextView()
+        self.text_to.get_buffer().set_text("This is where the translated text \
 would show up.")
+        self.text_to.set_editable(False)
+        self.text_to.set_cursor_visible(False)
 
-        scrolled_window.add(to_textview)
-        hbox.pack_start(scrolled_window, True, True, 0)
-
-
-        vbox.pack_start(hbox, True, True, 0)
+        scrolled_window.add(self.text_to)
+        text_hbox.pack_start(scrolled_window, True, True, 0)
 
         self.set_canvas(vbox)
         vbox.show_all()
 
     def on_translate_clicked(self, button):
+        pass
+
+    def on_lang_changed(self, combo):
         pass
