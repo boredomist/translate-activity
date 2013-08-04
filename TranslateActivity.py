@@ -19,8 +19,10 @@
 from gettext import gettext as _
 import logging
 import os
+import time
+import threading
 
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk, Pango, GObject
 
 from sugar3.activity import activity
 from sugar3.activity import widgets
@@ -32,7 +34,6 @@ from sugar3.activity.widgets import TitleEntry
 from sugar3.graphics import style
 from sugar3.graphics.toolbarbox import ToolbarBox
 
-
 import translate.client
 
 
@@ -41,8 +42,21 @@ class TranslateActivity(activity.Activity):
     def __init__(self, handle):
         activity.Activity.__init__(self, handle)
 
+        GObject.threads_init()
+
         self.set_title("Translate Activity")
-        self.client = translate.client.Client('TODO', port='TODO')
+
+        # XXX: This really needs to be configurable.
+        self.client = translate.client.Client('translate.erikprice.net', port=80)
+
+        # XXX: Maybe instead of failing here, how about creating a transient
+        #      local server, would use whatever web APIs possible. Not really
+        #      sure.
+
+        # TODO: This also should be done in the background so the user doesn't
+        #       have to stare at the startup screen / can get better error
+        #       information.
+        assert self.client.can_connect()
 
         toolbar_box = ToolbarBox()
         activity_button = widgets.ActivityToolbarButton(self)
@@ -92,17 +106,36 @@ class TranslateActivity(activity.Activity):
 
         select_hbox.pack_start(Gtk.Label(_("Translate to:")), False, False, 6)
 
+        # TODO: A better approach would be like the JS client, where full
+        #       language names are displayed, then ISO-639 names are used
+        #       internally. Requires more than simple ComboBoxText widget.
         self.lang_to = Gtk.ComboBoxText()
         self.lang_to.connect("changed", self.on_lang_changed)
         self.lang_to.set_entry_text_column(0)
         select_hbox.pack_start(self.lang_to, False, False, 0)
 
-        for lang in ['these', 'are', 'fake', 'language', 'entries']:
+        # These lines are a mouthful, but relatively straightforward. Generate
+        # separate lists of from and to languages, sort them alphabetically,
+        # and remove duplicates.
+        from_langs = sorted(list(set(map((lambda l: l[0]),
+                                         self.client.language_pairs()))))
+        to_langs = sorted(list(set(map((lambda l: l[1]),
+                                       self.client.language_pairs()))))
+
+        for lang in from_langs:
             self.lang_from.append_text(lang)
+
+        for lang in to_langs:
             self.lang_to.append_text(lang)
 
         button = Gtk.Button(_("Translate text!"))
+        button.connect("clicked", self.on_translate_clicked)
         select_hbox.pack_end(button, False, False, 6)
+
+        # Visible while waiting for results from server.
+        self.translate_spinner = Gtk.Spinner()
+        self.translate_spinner.start()
+        select_hbox.pack_end(self.translate_spinner, False, True, 6)
 
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_hexpand(False)
@@ -131,8 +164,35 @@ would show up.")
         self.set_canvas(vbox)
         vbox.show_all()
 
+        self.translate_spinner.hide()
+
     def on_translate_clicked(self, button):
-        pass
+        self.translate_spinner.show()
+        self.translate_spinner.start()
+
+        # Change our cursor to a spinner
+        gdk_window = self.get_root_window()
+        gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
+
+        # Run the translation request in the background
+        GObject.idle_add(self.translate_thread)
+
+    def translate_thread(self):
+        from_text = self.text_from.get_buffer().get_text()
+
+        # TODO: Need to actually write this
+        time.sleep(3)
+
+        self.translate_spinner.hide()
+
+        # Reset the cursor
+        # XXX: Is this the right cursor? It looks right, but I don't know if
+        #      it's the same one
+        gdk_window = self.get_root_window()
+        gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
 
     def on_lang_changed(self, combo):
+
+        # TODO: Update combo boxes for available language options.
+
         pass
