@@ -44,7 +44,7 @@ class TranslateActivity(activity.Activity):
 
         GObject.threads_init()
 
-        self.set_title("Translate Activity")
+        self.set_title(_("Translate Activity"))
 
         # XXX: This really needs to be configurable.
         self.client = translate.client.Client('translate.erikprice.net', port=80)
