@@ -178,10 +178,22 @@ would show up.")
         GObject.idle_add(self.translate_thread)
 
     def translate_thread(self):
-        from_text = self.text_from.get_buffer().get_text()
 
-        # TODO: Need to actually write this
-        time.sleep(3)
+        # TODO: This needs to be made way more robust / featureful
+
+        buf = self.text_from.get_buffer()
+        text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(),
+                            include_hidden_chars=False)
+
+        from_lang = self.lang_from.get_active_text()
+        to_lang = self.lang_to.get_active_text()
+
+        try:
+            result = self.client.translate(text=text, from_lang=from_lang,
+                                           to_lang=to_lang)
+            self.text_to.get_buffer().set_text(result)
+        except:
+            print("oops, failed, XXX: handle this")
 
         self.translate_spinner.hide()
 
