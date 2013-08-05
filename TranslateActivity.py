@@ -220,8 +220,15 @@ would show up.")
             result = self.client.translate(text=text, from_lang=from_lang,
                                            to_lang=to_lang)
             self.text_to.get_buffer().set_text(result)
-        except:
-            print("oops, failed, XXX: handle this")
+        except Exception as exc:
+            print("Error occured during translation: %s" % str(exc))
+
+            dialog = Gtk.MessageDialog(
+                self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK,
+                _("Couldn't translate text."))
+            dialog.format_secondary_text(_("An error occured while trying to \
+translate your text. Try again soon."))
+            dialog.run()
 
         self.translate_spinner.hide()
 
