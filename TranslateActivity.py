@@ -177,6 +177,9 @@ would show up.")
         scrolled_window.add(self.text_to)
         text_hbox.pack_start(scrolled_window, True, True, 0)
 
+        self.text_from.override_font(Pango.FontDescription("Sans 13"))
+        self.text_to.override_font(Pango.FontDescription("Sans 13"))
+
         self.set_canvas(vbox)
         vbox.show_all()
 
