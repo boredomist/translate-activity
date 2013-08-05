@@ -21,6 +21,7 @@ import logging
 import os
 import time
 import threading
+import locale
 
 from gi.repository import Gtk, Gdk, Pango, GObject
 
@@ -127,6 +128,21 @@ class TranslateActivity(activity.Activity):
 
         for lang in to_langs:
             self.lang_to.append_text(lang)
+
+        # Try to set the default from language selection to the user's
+        # locale. This is a pretty dumb method of doing it, it should try to be
+        # slightly more intelligent.
+        lang = locale.getdefaultlocale()[0]
+        # "en_US" -> "en"
+        lang = lang.split("_")[0]
+
+        if lang in from_langs:
+            self.lang_from.set_active(from_langs.index(lang))
+        else:
+            # Fall back to whatever the first option is.
+            self.lang_from.set_active(0)
+
+        self.lang_to.set_active(0)
 
         button = Gtk.Button(_("Translate text!"))
         button.connect("clicked", self.on_translate_clicked)
