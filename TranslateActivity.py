@@ -98,7 +98,13 @@ class TranslateActivity(activity.Activity):
         vbox.pack_start(select_hbox, False, True, 6)
         vbox.pack_end(text_hbox, True, True, 0)
 
-        select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 6)
+        # Spacers
+        text_hbox.pack_start(Gtk.Box(), False, True, 10)
+        text_hbox.pack_end(Gtk.Box(), False, True, 10)
+        select_hbox.pack_start(Gtk.Box(), False, True, 10)
+        select_hbox.pack_end(Gtk.Box(), False, True, 10)
+
+        select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 0)
 
         self.lang_from = Gtk.ComboBoxText()
         self.lang_from.connect("changed", self.on_lang_changed)
@@ -146,7 +152,7 @@ class TranslateActivity(activity.Activity):
 
         button = Gtk.Button(_("Translate text!"))
         button.connect("clicked", self.on_translate_clicked)
-        select_hbox.pack_end(button, False, False, 6)
+        select_hbox.pack_end(button, False, False, 0)
 
         # Visible while waiting for results from server.
         self.translate_spinner = Gtk.Spinner()
@@ -163,6 +169,9 @@ some text to translate.")
 
         scrolled_window.add(self.text_from)
         text_hbox.pack_start(scrolled_window, True, True, 0)
+
+        # Spacer
+        text_hbox.pack_start(Gtk.Box(), False, True, 10)
 
         scrolled_window = Gtk.ScrolledWindow()
         scrolled_window.set_hexpand(False)
