@@ -98,41 +98,20 @@ class TranslateActivity(activity.Activity):
         select_hbox = Gtk.Box(spacing=6)
 
         vbox.pack_start(select_hbox, False, True, 6)
-        vbox.pack_end(text_hbox, True, True, 0)
+        vbox.pack_start(text_hbox, True, True, 0)
 
         # Spacers
         text_hbox.pack_start(Gtk.Box(), False, True, 10)
         text_hbox.pack_end(Gtk.Box(), False, True, 10)
         select_hbox.pack_start(Gtk.Box(), False, True, 10)
         select_hbox.pack_end(Gtk.Box(), False, True, 10)
+        vbox.pack_end(Gtk.Box(), False, True, 10)
 
         select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 0)
 
-        self.lang_from = Gtk.ComboBoxText()
-        self.lang_from.connect("changed", self.on_lang_from_changed)
-        self.lang_from.set_entry_text_column(0)
-        select_hbox.pack_start(self.lang_from, False, False, 0)
-
-        select_hbox.pack_start(Gtk.Label(_("Translate to:")), False, False, 6)
-
-        # TODO: A better approach would be like the JS client, where full
-        #       language names are displayed, then ISO-639 names are used
-        #       internally. Requires more than simple ComboBoxText widget.
-        self.lang_to = Gtk.ComboBoxText()
-        self.lang_to.connect("changed", self.on_lang_to_changed)
-        self.lang_to.set_entry_text_column(0)
-        select_hbox.pack_start(self.lang_to, False, False, 0)
-
-        # These lines are a mouthful, but relatively straightforward. Generate
-        # separate lists of from and to languages, sort them alphabetically,
-        # and remove duplicates.
-        from_langs = sorted(list(set(map((lambda l: l[0]),
-                                         self.client.language_pairs()))))
-        to_langs = sorted(list(set(map((lambda l: l[1]),
-                                       self.client.language_pairs()))))
-
-        for lang in from_langs:
-            self.lang_from.append_text(lang)
+        # Models for the ComboBoxes
+        from_lang_store = Gtk.ListStore(str, str)
+        to_lang_store = Gtk.ListStore(str, str)
 
         # Try to set the default from language selection to the user's
         # locale.
@@ -140,6 +119,42 @@ class TranslateActivity(activity.Activity):
         # XXX: I believe this could fail in some cases, it should be changed
         # somehow.
         locale = babel.default_locale(category="LANG")
+        self.locale = Locale(locale)
+
+        pairs = self.client.language_pairs()
+
+        from_langs = set()
+
+        # TODO: maybe try falling back to first two letters?
+        for pair in pairs:
+            print(repr(pair))
+            try:
+                from_locale = Locale.parse(pair[0])
+                from_name = from_locale.get_language_name(self.locale)
+            except (babel.UnknownLocaleError, ValueError):
+                # Fall back to language code
+                from_name = pair[0]
+                print('Failed to get a locale for {0}'.format(pair[0]))
+
+            from_langs.add((pair[0], from_name))
+
+        from_langs = sorted(list(from_langs), (lambda x,y: cmp(x[1], y[1])))
+
+        for lang in from_langs:
+            from_lang_store.append(lang)
+
+        self.lang_from = Gtk.ComboBox.new_with_model_and_entry(from_lang_store)
+        self.lang_to = Gtk.ComboBox.new_with_model_and_entry(to_lang_store)
+
+        self.lang_from.connect("changed", self.on_lang_from_changed)
+        self.lang_to.connect("changed", self.on_lang_to_changed)
+
+        self.lang_from.set_entry_text_column(1)
+        self.lang_to.set_entry_text_column(1)
+
+        select_hbox.pack_start(self.lang_from, False, False, 0)
+        select_hbox.pack_start(Gtk.Label(_("Translate to:")), False, False, 6)
+        select_hbox.pack_start(self.lang_to, False, False, 0)
 
         # Fall back to whatever the first option is.
         self.lang_from.set_active(0)
@@ -149,11 +164,9 @@ class TranslateActivity(activity.Activity):
             #
             # e.g. if locale is "en_US", and "en" is in the combobox, then will
             # return non-None.
-            if babel.negotiate_locale([lang], [locale]) is not None:
+            if babel.negotiate_locale([lang[0]], [locale]) is not None:
                 self.lang_from.set_active(idx)
                 break
-
-        self.locale = Locale(locale)
 
         # Make sure the to_lang combobox is up to date
         self.on_lang_from_changed(self.lang_from)
@@ -221,8 +234,14 @@ would show up.")
         text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(),
                             include_hidden_chars=False)
 
-        from_lang = self.lang_from.get_active_text()
-        to_lang = self.lang_to.get_active_text()
+        # XXX: There's a lot of room for errors here. Don't want to die in a
+        #      thread and never return.
+
+        from_lang_iter = self.lang_from.get_active_iter()
+        to_lang_iter = self.lang_to.get_active_iter()
+
+        from_lang = self.lang_from.get_model()[from_lang_iter][0]
+        to_lang = self.lang_to.get_model()[to_lang_iter][0]
 
         try:
             result = self.client.translate(text=text, from_lang=from_lang,
@@ -247,13 +266,30 @@ translate your text. Try again soon."))
         gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
 
     def on_lang_from_changed(self, combo):
-        lang = combo.get_active_text()
+        lang_iter = combo.get_active_iter()
 
-        if lang is not None:
-            self.lang_to.remove_all()
+        if lang_iter is not None:
+            model = combo.get_model()
+            code, lang = model[lang_iter][:2]
 
-            for to_lang in self.client.languages_from(from_lang=lang):
-                self.lang_to.append_text(to_lang)
+            # Remove all the old choices
+            self.lang_to.get_model().clear()
+
+            to_langs = set()
+
+            for to_lang in self.client.languages_from(from_lang=code):
+                try:
+                    to_locale = Locale.parse(to_lang)
+                    to_name = to_locale.get_language_name(self.locale)
+                except (babel.UnknownLocaleError, ValueError):
+                    # Fall back to language code
+                    to_name = to_lang
+                    print('Failed to get a locale for {0}'.format(pair[1]))
+
+                to_langs.add((to_lang, to_name))
+
+            for lang in sorted(list(to_langs), (lambda x,y: cmp(x[1], y[1]))):
+                self.lang_to.get_model().append(lang)
 
             self.lang_to.set_active(0)
 
