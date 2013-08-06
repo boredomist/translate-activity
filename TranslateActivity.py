@@ -107,7 +107,7 @@ class TranslateActivity(activity.Activity):
         select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 0)
 
         self.lang_from = Gtk.ComboBoxText()
-        self.lang_from.connect("changed", self.on_lang_changed)
+        self.lang_from.connect("changed", self.on_lang_from_changed)
         self.lang_from.set_entry_text_column(0)
         select_hbox.pack_start(self.lang_from, False, False, 0)
 
@@ -117,7 +117,7 @@ class TranslateActivity(activity.Activity):
         #       language names are displayed, then ISO-639 names are used
         #       internally. Requires more than simple ComboBoxText widget.
         self.lang_to = Gtk.ComboBoxText()
-        self.lang_to.connect("changed", self.on_lang_changed)
+        self.lang_to.connect("changed", self.on_lang_to_changed)
         self.lang_to.set_entry_text_column(0)
         select_hbox.pack_start(self.lang_to, False, False, 0)
 
@@ -132,10 +132,7 @@ class TranslateActivity(activity.Activity):
         for lang in from_langs:
             self.lang_from.append_text(lang)
 
-        for lang in to_langs:
-            self.lang_to.append_text(lang)
-
-        # Try to set the default from language selection to the user's
+            # Try to set the default from language selection to the user's
         # locale. This is a pretty dumb method of doing it, it should try to be
         # slightly more intelligent.
         lang = locale.getdefaultlocale()[0]
@@ -148,7 +145,8 @@ class TranslateActivity(activity.Activity):
             # Fall back to whatever the first option is.
             self.lang_from.set_active(0)
 
-        self.lang_to.set_active(0)
+        # Make sure the to_lang combobox is up to date
+        self.on_lang_from_changed(self.lang_from)
 
         button = Gtk.Button(_("Translate text!"))
         button.connect("clicked", self.on_translate_clicked)
@@ -238,8 +236,17 @@ translate your text. Try again soon."))
         gdk_window = self.get_root_window()
         gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
 
-    def on_lang_changed(self, combo):
+    def on_lang_from_changed(self, combo):
+        lang = combo.get_active_text()
 
-        # TODO: Update combo boxes for available language options.
+        if lang is not None:
+            self.lang_to.remove_all()
 
+            for to_lang in self.client.languages_from(from_lang=lang):
+                self.lang_to.append_text(to_lang)
+
+            self.lang_to.set_active(0)
+
+    def on_lang_to_changed(self, combo):
+        # XXX: Figure out what to do here.
         pass
