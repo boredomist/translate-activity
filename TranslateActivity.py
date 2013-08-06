@@ -21,7 +21,9 @@ import logging
 import os
 import time
 import threading
-import locale
+
+import babel
+from babel import Locale
 
 from gi.repository import Gtk, Gdk, Pango, GObject
 
@@ -132,18 +134,26 @@ class TranslateActivity(activity.Activity):
         for lang in from_langs:
             self.lang_from.append_text(lang)
 
-            # Try to set the default from language selection to the user's
-        # locale. This is a pretty dumb method of doing it, it should try to be
-        # slightly more intelligent.
-        lang = locale.getdefaultlocale()[0]
-        # "en_US" -> "en"
-        lang = lang.split("_")[0]
+        # Try to set the default from language selection to the user's
+        # locale.
+        #
+        # XXX: I believe this could fail in some cases, it should be changed
+        # somehow.
+        locale = babel.default_locale(category="LANG")
 
-        if lang in from_langs:
-            self.lang_from.set_active(from_langs.index(lang))
-        else:
-            # Fall back to whatever the first option is.
-            self.lang_from.set_active(0)
+        # Fall back to whatever the first option is.
+        self.lang_from.set_active(0)
+
+        for idx, lang in enumerate(from_langs):
+            # Check if the user's locale is "good enough".
+            #
+            # e.g. if locale is "en_US", and "en" is in the combobox, then will
+            # return non-None.
+            if babel.negotiate_locale([lang], [locale]) is not None:
+                self.lang_from.set_active(idx)
+                break
+
+        self.locale = Locale(locale)
 
         # Make sure the to_lang combobox is up to date
         self.on_lang_from_changed(self.lang_from)
