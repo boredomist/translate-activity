@@ -27,6 +27,7 @@ from sugar3.activity.widgets import ShareButton
 from sugar3.activity.widgets import StopButton
 from sugar3.activity.widgets import TitleEntry
 from sugar3.graphics.toolbarbox import ToolbarBox
+from sugar3.graphics.alert import NotifyAlert
 
 import translate.client
 from translate.client.exceptions import TranslateException
@@ -249,13 +250,11 @@ would show up.")
 
         # This shouldn't happen, but let's make sure
         if from_lang_iter is None or to_lang_iter is None:
-            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,
-                                       Gtk.ButtonsType.OK,
-                                       _("Select languages!"))
 
-            dialog.format_secondary_text(_("You need to select languages to \
-translate between!"))
-            dialog.run()
+            self._create_alert(_("Select languages!"),
+                               _("You need to select languages to translate \
+between!"))
+
             _reset_gui()
             return
 
@@ -270,12 +269,9 @@ translate between!"))
         except TranslateException as exc:
             print("Error occured during translation: %s" % str(exc))
 
-            dialog = Gtk.MessageDialog(
-                self, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK,
-                _("Couldn't translate text."))
-            dialog.format_secondary_text(_("An error occured while trying to \
+            self._create_alert(_("Couldn't translate text."),
+                               _("An error occured while trying to \
 translate your text. Try again soon."))
-            dialog.run()
 
         finally:
             _reset_gui()
@@ -311,3 +307,14 @@ translate your text. Try again soon."))
     def on_lang_to_changed(self, combo):
         # XXX: Figure out what to do here.
         pass
+
+    def _create_alert(self, title, msg, timeout=10):
+        alert = NotifyAlert(timeout)
+        alert.props.title = title
+        alert.props.msg = msg
+        alert.connect('response', self._alert_cancel_cb)
+
+        self.add_alert(alert)
+
+    def _alert_cancel_cb(self, alert, resp_id):
+        self.remove_alert(alert)
