@@ -29,6 +29,7 @@ from sugar3.activity.widgets import TitleEntry
 from sugar3.graphics.toolbarbox import ToolbarBox
 
 import translate.client
+from translate.client.exceptions import TranslateException
 
 
 class TranslateActivity(activity.Activity):
@@ -209,6 +210,7 @@ would show up.")
         self.translate_spinner.hide()
 
     def on_translate_clicked(self, button):
+
         self.translate_spinner.show()
         self.translate_spinner.start()
 
@@ -221,17 +223,41 @@ would show up.")
 
     def translate_thread(self):
 
+        def _reset_gui():
+            """Clean up spinner / cursor state."""
+
+            self.translate_spinner.hide()
+
+            # Reset the cursor
+            gdk_window = self.get_root_window()
+            gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
+
         # TODO: This needs to be made way more robust / featureful
 
         buf = self.text_from.get_buffer()
         text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(),
                             include_hidden_chars=False)
 
-        # XXX: There's a lot of room for errors here. Don't want to die in a
-        #      thread and never return.
+        # Don't bother doing anything with blank text input.
+        if text is None or text.strip() == '':
+            self.text_to.get_buffer().set_text('')
+            _reset_gui()
+            return
 
         from_lang_iter = self.lang_from.get_active_iter()
         to_lang_iter = self.lang_to.get_active_iter()
+
+        # This shouldn't happen, but let's make sure
+        if from_lang_iter is None or to_lang_iter is None:
+            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,
+                                       Gtk.ButtonsType.OK,
+                                       _("Select languages!"))
+
+            dialog.format_secondary_text(_("You need to select languages to \
+translate between!"))
+            dialog.run()
+            _reset_gui()
+            return
 
         from_lang = self.lang_from.get_model()[from_lang_iter][0]
         to_lang = self.lang_to.get_model()[to_lang_iter][0]
@@ -240,7 +266,8 @@ would show up.")
             result = self.client.translate(text=text, from_lang=from_lang,
                                            to_lang=to_lang)
             self.text_to.get_buffer().set_text(result)
-        except Exception as exc:
+
+        except TranslateException as exc:
             print("Error occured during translation: %s" % str(exc))
 
             dialog = Gtk.MessageDialog(
@@ -251,13 +278,7 @@ translate your text. Try again soon."))
             dialog.run()
 
         finally:
-            self.translate_spinner.hide()
-
-            # Reset the cursor
-            # XXX: Is this the right cursor? It looks right, but I don't know
-            #      if it's the same one
-            gdk_window = self.get_root_window()
-            gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
+            _reset_gui()
 
     def on_lang_from_changed(self, combo):
         lang_iter = combo.get_active_iter()
