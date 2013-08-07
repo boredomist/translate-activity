@@ -17,10 +17,6 @@
 # Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 from gettext import gettext as _
-import logging
-import os
-import time
-import threading
 
 import babel
 from babel import Locale
@@ -29,12 +25,10 @@ from gi.repository import Gtk, Gdk, Pango, GObject
 
 from sugar3.activity import activity
 from sugar3.activity import widgets
-from sugar3.activity.widgets import ActivityButton
 from sugar3.activity.widgets import DescriptionItem
 from sugar3.activity.widgets import ShareButton
 from sugar3.activity.widgets import StopButton
 from sugar3.activity.widgets import TitleEntry
-from sugar3.graphics import style
 from sugar3.graphics.toolbarbox import ToolbarBox
 
 import translate.client
@@ -50,7 +44,8 @@ class TranslateActivity(activity.Activity):
         self.set_title(_("Translate Activity"))
 
         # XXX: This really needs to be configurable.
-        self.client = translate.client.Client('translate.erikprice.net', port=80)
+        self.client = translate.client.Client('translate.erikprice.net',
+                                              port=80)
 
         # XXX: Maybe instead of failing here, how about creating a transient
         #      local server, would use whatever web APIs possible. Not really
@@ -107,7 +102,8 @@ class TranslateActivity(activity.Activity):
         select_hbox.pack_end(Gtk.Box(), False, True, 10)
         vbox.pack_end(Gtk.Box(), False, True, 10)
 
-        select_hbox.pack_start(Gtk.Label(_("Translate from:")), False, False, 0)
+        select_hbox.pack_start(Gtk.Label(_("Translate from:")),
+                               False, False, 0)
 
         # Models for the ComboBoxes
         from_lang_store = Gtk.ListStore(str, str)
@@ -138,7 +134,7 @@ class TranslateActivity(activity.Activity):
 
             from_langs.add((pair[0], from_name))
 
-        from_langs = sorted(list(from_langs), (lambda x,y: cmp(x[1], y[1])))
+        from_langs = sorted(list(from_langs), (lambda x, y: cmp(x[1], y[1])))
 
         for lang in from_langs:
             from_lang_store.append(lang)
@@ -257,13 +253,14 @@ would show up.")
 translate your text. Try again soon."))
             dialog.run()
 
-        self.translate_spinner.hide()
+        finally:
+            self.translate_spinner.hide()
 
-        # Reset the cursor
-        # XXX: Is this the right cursor? It looks right, but I don't know if
-        #      it's the same one
-        gdk_window = self.get_root_window()
-        gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
+            # Reset the cursor
+            # XXX: Is this the right cursor? It looks right, but I don't know
+            #      if it's the same one
+            gdk_window = self.get_root_window()
+            gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
 
     def on_lang_from_changed(self, combo):
         lang_iter = combo.get_active_iter()
@@ -284,11 +281,11 @@ translate your text. Try again soon."))
                 except (babel.UnknownLocaleError, ValueError):
                     # Fall back to language code
                     to_name = to_lang
-                    print('Failed to get a locale for {0}'.format(pair[1]))
+                    print('Failed to get a locale for {0}'.format(to_lang))
 
                 to_langs.add((to_lang, to_name))
 
-            for lang in sorted(list(to_langs), (lambda x,y: cmp(x[1], y[1]))):
+            for lang in sorted(list(to_langs), (lambda x, y: cmp(x[1], y[1]))):
                 self.lang_to.get_model().append(lang)
 
             self.lang_to.set_active(0)
