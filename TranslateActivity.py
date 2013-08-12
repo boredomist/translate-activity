@@ -104,8 +104,7 @@ class TranslateActivity(activity.Activity):
         self.lang_from = Gtk.ComboBox.new_with_model_and_entry(from_lang_store)
         self.lang_to = Gtk.ComboBox.new_with_model_and_entry(to_lang_store)
 
-        self.lang_from.connect("changed", self.on_lang_from_changed)
-        self.lang_to.connect("changed", self.on_lang_to_changed)
+        self.lang_from.connect("changed", self._lang_from_changed_cb)
 
         self.lang_from.set_entry_text_column(1)
         self.lang_to.set_entry_text_column(1)
@@ -119,9 +118,8 @@ class TranslateActivity(activity.Activity):
         # Disable the button
         self.translate_button.set_sensitive(False)
 
-        button = Gtk.Button(_("Translate text!"))
-        button.connect("clicked", self.on_translate_clicked)
-        select_hbox.pack_end(button, False, False, 0)
+        self.translate_button.connect("clicked", self._translate_btn_cb)
+        select_hbox.pack_end(self.translate_button, False, False, 0)
 
         # Visible while waiting for results from server.
         self.translate_spinner = Gtk.Spinner()
@@ -249,9 +247,12 @@ would show up.")
         gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.WATCH))
 
         # Run the translation request in the background
-        GObject.idle_add(self.translate_thread)
+        GObject.idle_add(self._translate_in_background)
 
-    def translate_thread(self):
+    def _translate_in_background(self):
+        """Get the text and language choices from the UI elements, and query
+        the server for a translation in the background.
+        """
 
         def _reset_gui():
             """Clean up spinner / cursor state."""
@@ -280,9 +281,9 @@ would show up.")
         # This shouldn't happen, but let's make sure
         if from_lang_iter is None or to_lang_iter is None:
 
-            self._create_alert(_("Select languages!"),
-                               _("You need to select languages to translate \
-between!"))
+            self._create_timed_alert(
+                _("Select languages!"),
+                _("You need to select languages to translate between!"))
 
             _reset_gui()
             return
@@ -298,14 +299,15 @@ between!"))
         except TranslateException as exc:
             print("Error occured during translation: %s" % str(exc))
 
-            self._create_alert(_("Couldn't translate text."),
-                               _("An error occured while trying to \
-translate your text. Try again soon."))
+            self._create_timed_alert(
+                _("Couldn't translate text."),
+                _("An error occured while trying to translate your text. Try \
+again soon."))
 
         finally:
             _reset_gui()
 
-    def on_lang_from_changed(self, combo):
+    def _lang_from_changed_cb(self, combo):
         lang_iter = combo.get_active_iter()
 
         if lang_iter is not None:
@@ -333,11 +335,7 @@ translate your text. Try again soon."))
 
             self.lang_to.set_active(0)
 
-    def on_lang_to_changed(self, combo):
-        # XXX: Figure out what to do here.
-        pass
-
-    def _create_alert(self, title, msg, timeout=10):
+    def _create_timed_alert(self, title, msg, timeout=10):
         alert = NotifyAlert(timeout)
         alert.props.title = title
         alert.props.msg = msg
