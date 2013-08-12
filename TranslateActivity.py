@@ -27,10 +27,12 @@ from sugar3.activity.widgets import ShareButton
 from sugar3.activity.widgets import StopButton
 from sugar3.activity.widgets import TitleEntry
 from sugar3.graphics.toolbarbox import ToolbarBox
-from sugar3.graphics.alert import NotifyAlert
+from sugar3.graphics.alert import Alert, NotifyAlert
 
 import translate.client
 from translate.client.exceptions import TranslateException
+
+# TODO: logger instead of print
 
 
 class TranslateActivity(activity.Activity):
@@ -43,17 +45,8 @@ class TranslateActivity(activity.Activity):
         self.set_title(_("Translate Activity"))
 
         # XXX: This really needs to be configurable.
-        self.client = translate.client.Client('translate.erikprice.net',
-                                              port=80)
-
-        # XXX: Maybe instead of failing here, how about creating a transient
-        #      local server, would use whatever web APIs possible. Not really
-        #      sure.
-
-        # TODO: This also should be done in the background so the user doesn't
-        #       have to stare at the startup screen / can get better error
-        #       information.
-        assert self.client.can_connect()
+        self.client = translate.client.Client(
+            'translate.erikprice.net', port=80)
 
         toolbar_box = ToolbarBox()
         activity_button = widgets.ActivityToolbarButton(self)
@@ -108,36 +101,6 @@ class TranslateActivity(activity.Activity):
         from_lang_store = Gtk.ListStore(str, str)
         to_lang_store = Gtk.ListStore(str, str)
 
-        # Try to set the default from language selection to the user's
-        # locale.
-        #
-        # XXX: I believe this could fail in some cases, it should be changed
-        # somehow.
-        locale = babel.default_locale(category="LANG")
-        self.locale = Locale(locale)
-
-        pairs = self.client.language_pairs()
-
-        from_langs = set()
-
-        # TODO: maybe try falling back to first two letters?
-        for pair in pairs:
-            print(repr(pair))
-            try:
-                from_locale = Locale.parse(pair[0])
-                from_name = from_locale.get_language_name(self.locale)
-            except (babel.UnknownLocaleError, ValueError):
-                # Fall back to language code
-                from_name = pair[0]
-                print('Failed to get a locale for {0}'.format(pair[0]))
-
-            from_langs.add((pair[0], from_name))
-
-        from_langs = sorted(list(from_langs), (lambda x, y: cmp(x[1], y[1])))
-
-        for lang in from_langs:
-            from_lang_store.append(lang)
-
         self.lang_from = Gtk.ComboBox.new_with_model_and_entry(from_lang_store)
         self.lang_to = Gtk.ComboBox.new_with_model_and_entry(to_lang_store)
 
@@ -151,20 +114,10 @@ class TranslateActivity(activity.Activity):
         select_hbox.pack_start(Gtk.Label(_("Translate to:")), False, False, 6)
         select_hbox.pack_start(self.lang_to, False, False, 0)
 
-        # Fall back to whatever the first option is.
-        self.lang_from.set_active(0)
+        self.translate_button = Gtk.Button(_("Translate text!"))
 
-        for idx, lang in enumerate(from_langs):
-            # Check if the user's locale is "good enough".
-            #
-            # e.g. if locale is "en_US", and "en" is in the combobox, then will
-            # return non-None.
-            if babel.negotiate_locale([lang[0]], [locale]) is not None:
-                self.lang_from.set_active(idx)
-                break
-
-        # Make sure the to_lang combobox is up to date
-        self.on_lang_from_changed(self.lang_from)
+        # Disable the button
+        self.translate_button.set_sensitive(False)
 
         button = Gtk.Button(_("Translate text!"))
         button.connect("clicked", self.on_translate_clicked)
@@ -210,7 +163,83 @@ would show up.")
 
         self.translate_spinner.hide()
 
-    def on_translate_clicked(self, button):
+        alert = self._create_alert(_("Connecting"),
+                                   _("Trying to reach server..."))
+
+        # Run the rest of the initialization in the background
+        GObject.idle_add(self._init_translate, alert)
+
+    def _init_translate(self, alert):
+        """Run in background at startup, initializes data, contacts server,
+        does that sort of setup procedure.
+        """
+
+        # XXX: Maybe instead of failing here, how about creating a transient
+        #      local server, would use whatever web APIs possible. Not really
+        #      sure.
+
+        if not self.client.can_connect():
+            self.remove_alert(alert)
+            self._create_alert(
+                _("Connection error"),
+                _("Couldn't connect to the server!"))
+
+        from_lang_store = self.lang_from.get_model()
+
+        # Try to set the default from language selection to the user's
+        # locale.
+
+        # XXX: If default_locale fails (theoretically could if ENV isn't
+        #      proper), this will raise babel.core.UnknownLocaleError.
+        locale = babel.default_locale(category="LANG")
+        self.locale = Locale(locale)
+
+        pairs = self.client.language_pairs()
+
+        from_langs = set()
+
+        # TODO: maybe try falling back to first two letters?
+        for pair in pairs:
+            print(repr(pair))
+            try:
+                from_locale = Locale.parse(pair[0])
+                from_name = from_locale.get_language_name(self.locale)
+            except (babel.UnknownLocaleError, ValueError):
+                # Fall back to language code
+                from_name = pair[0]
+                print('Failed to get a locale for {0}'.format(pair[0]))
+
+            from_langs.add((pair[0], from_name))
+
+        from_langs = sorted(list(from_langs), (lambda x, y: cmp(x[1], y[1])))
+
+        for lang in from_langs:
+            from_lang_store.append(lang)
+
+        # Fall back to whatever the first option is.
+        self.lang_from.set_active(0)
+
+        for idx, lang in enumerate(from_langs):
+            # Check if the user's locale is "good enough".
+            #
+            # e.g. if locale is "en_US", and "en" is in the combobox, then will
+            # return non-None.
+            if babel.negotiate_locale([lang[0]], [locale]) is not None:
+                self.lang_from.set_active(idx)
+                break
+
+        # Make sure the to_lang combobox is up to date
+        self._lang_from_changed_cb(self.lang_from)
+
+        # Enable the button
+        self.translate_button.set_sensitive(True)
+        self.remove_alert(alert)
+
+    def _translate_btn_cb(self, button):
+        """Callback function for when the "translate text" button is
+        clicked. This just calls the "real" callback function, which is run off
+        the main thread.
+        """
 
         self.translate_spinner.show()
         self.translate_spinner.start()
@@ -315,6 +344,18 @@ translate your text. Try again soon."))
         alert.connect('response', self._alert_cancel_cb)
 
         self.add_alert(alert)
+
+    def _create_alert(self, title, msg):
+        """Create and display an alert that cannot be dismissed by the user."""
+
+        alert = Alert()
+        alert.props.title = title
+        alert.props.msg = msg
+        alert.connect('response', self._alert_cancel_cb)
+
+        self.add_alert(alert)
+
+        return alert
 
     def _alert_cancel_cb(self, alert, resp_id):
         self.remove_alert(alert)
