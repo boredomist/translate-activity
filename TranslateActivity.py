@@ -20,6 +20,8 @@ from babel import Locale
 
 from gi.repository import Gtk, Gdk, Pango, GObject
 
+import sugar3.logger
+
 from sugar3.activity import activity
 from sugar3.activity import widgets
 from sugar3.activity.widgets import DescriptionItem
@@ -32,8 +34,6 @@ from sugar3.graphics.alert import Alert, NotifyAlert
 import translate.client
 from translate.client.exceptions import TranslateException
 
-# TODO: logger instead of print
-
 
 class TranslateActivity(activity.Activity):
 
@@ -43,6 +43,10 @@ class TranslateActivity(activity.Activity):
         GObject.threads_init()
 
         self.set_title(_("Translate Activity"))
+
+        # XXX: Is this the right way of doing it? I mean, it works...
+        self._logger = sugar3.logger.logging
+        self._logger.info('Starting translate activity')
 
         # XXX: This really needs to be configurable.
         self.client = translate.client.Client(
@@ -192,20 +196,21 @@ would show up.")
         locale = babel.default_locale(category="LANG")
         self.locale = Locale(locale)
 
+        self._logger.info("Setting locale to %s", repr(self.locale))
+
         pairs = self.client.language_pairs()
 
         from_langs = set()
 
         # TODO: maybe try falling back to first two letters?
         for pair in pairs:
-            print(repr(pair))
             try:
                 from_locale = Locale.parse(pair[0])
                 from_name = from_locale.get_language_name(self.locale)
             except (babel.UnknownLocaleError, ValueError):
                 # Fall back to language code
                 from_name = pair[0]
-                print('Failed to get a locale for {0}'.format(pair[0]))
+                self._logger.error('Failed to get a locale for %s', pair[0])
 
             from_langs.add((pair[0], from_name))
 
@@ -297,7 +302,7 @@ would show up.")
             self.text_to.get_buffer().set_text(result)
 
         except TranslateException as exc:
-            print("Error occured during translation: %s" % str(exc))
+            self._logger.error("Error occured while translating: %s", str(exc))
 
             self._create_timed_alert(
                 _("Couldn't translate text."),
@@ -326,7 +331,7 @@ again soon."))
                 except (babel.UnknownLocaleError, ValueError):
                     # Fall back to language code
                     to_name = to_lang
-                    print('Failed to get a locale for {0}'.format(to_lang))
+                    self._logger.error('Failed to get locale for %s', to_lang)
 
                 to_langs.add((to_lang, to_name))
 
