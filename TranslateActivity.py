@@ -244,6 +244,10 @@ would show up.")
         the main thread.
         """
 
+        # Disable the button while waiting on server, so pounding on the button
+        # won't create a ton of additional requests.
+        self.translate_button.set_sensitive(False)
+
         self.translate_spinner.show()
         self.translate_spinner.start()
 
@@ -254,19 +258,22 @@ would show up.")
         # Run the translation request in the background
         GObject.idle_add(self._translate_in_background)
 
+    def _reset_gui(self):
+        """Clean up spinner / cursor state (for after _translate_btn_cb)"""
+
+        self.translate_spinner.hide()
+
+        # Reset the cursor
+        gdk_window = self.get_root_window()
+        gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
+
+        # Enable the button
+        self.translate_button.set_sensitive(True)
+
     def _translate_in_background(self):
         """Get the text and language choices from the UI elements, and query
         the server for a translation in the background.
         """
-
-        def _reset_gui():
-            """Clean up spinner / cursor state."""
-
-            self.translate_spinner.hide()
-
-            # Reset the cursor
-            gdk_window = self.get_root_window()
-            gdk_window.set_cursor(Gdk.Cursor(Gdk.CursorType.TOP_LEFT_ARROW))
 
         # TODO: This needs to be made way more robust / featureful
 
@@ -277,7 +284,7 @@ would show up.")
         # Don't bother doing anything with blank text input.
         if text is None or text.strip() == '':
             self.text_to.get_buffer().set_text('')
-            _reset_gui()
+            self._reset_gui()
             return
 
         from_lang_iter = self.lang_from.get_active_iter()
@@ -290,7 +297,7 @@ would show up.")
                 _("Select languages!"),
                 _("You need to select languages to translate between!"))
 
-            _reset_gui()
+            self._reset_gui()
             return
 
         from_lang = self.lang_from.get_model()[from_lang_iter][0]
@@ -310,7 +317,7 @@ would show up.")
 again soon."))
 
         finally:
-            _reset_gui()
+            self._reset_gui()
 
     def _lang_from_changed_cb(self, combo):
         lang_iter = combo.get_active_iter()
