@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-05 20:44-0400\n"
+"POT-Creation-Date: 2013-08-15 01:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,26 +17,58 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: TranslateActivity.py:48
+#: activity/activity.info:2
+msgid "Translate"
+msgstr ""
+
+#: activity/activity.info:3
+msgid "TODO: Write an activity summary!"
+msgstr ""
+
+#: TranslateActivity.py:45
 msgid "Translate Activity"
 msgstr ""
 
-#: TranslateActivity.py:107
+#: TranslateActivity.py:97
 msgid "Translate from:"
 msgstr ""
 
-#: TranslateActivity.py:114
+#: TranslateActivity.py:113
 msgid "Translate to:"
 msgstr ""
 
-#: TranslateActivity.py:153
+#: TranslateActivity.py:116
 msgid "Translate text!"
 msgstr ""
 
-#: TranslateActivity.py:228
+#: TranslateActivity.py:164
+msgid "Connecting"
+msgstr ""
+
+#: TranslateActivity.py:165
+msgid "Trying to reach server..."
+msgstr ""
+
+#: TranslateActivity.py:182
+msgid "Connection error"
+msgstr ""
+
+#: TranslateActivity.py:183
+msgid "Couldn't connect to the server!"
+msgstr ""
+
+#: TranslateActivity.py:285
+msgid "Select languages!"
+msgstr ""
+
+#: TranslateActivity.py:286
+msgid "You need to select languages to translate between!"
+msgstr ""
+
+#: TranslateActivity.py:303
 msgid "Couldn't translate text."
 msgstr ""
 
-#: TranslateActivity.py:229
+#: TranslateActivity.py:304
 msgid "An error occured while trying to translate your text. Try again soon."
 msgstr ""
