@@ -4,6 +4,19 @@ translate-activity
 Simple Sugar Activity to make use of
 [translate](https://github.com/boredomist/translate).
 
+Setup
+-----
+
+There are a few external dependencies that must be installed first (see 
+[issue #6](https://github.com/boredomist/translate-activity/issues/6)).
+Until this is changed, here's the process:
+
+```
+$ pip install -r requirements.txt
+$ python setup.py dev
+```
+
+Easy enough.
 
 License
 -------
