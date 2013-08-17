@@ -20,7 +20,7 @@ from babel import Locale
 
 from gi.repository import Gtk, Gdk, Pango, GObject
 
-import sugar3.logger
+import logging
 
 from sugar3.activity import activity
 from sugar3.activity import widgets
@@ -44,8 +44,7 @@ class TranslateActivity(activity.Activity):
 
         self.set_title(_("Translate Activity"))
 
-        # XXX: Is this the right way of doing it? I mean, it works...
-        self._logger = sugar3.logger.logging
+        self._logger = logging.getLogger('Translate')
         self._logger.info('Starting translate activity')
 
         # XXX: This really needs to be configurable.
