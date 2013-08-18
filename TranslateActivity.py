@@ -21,6 +21,7 @@ from babel import Locale
 from gi.repository import Gtk, Gdk, Pango, GObject
 
 import logging
+import os
 
 from sugar3.activity import activity
 from sugar3.activity import widgets
@@ -35,6 +36,11 @@ import translate.client
 from translate.client.exceptions import TranslateException
 
 
+# XXX: Probably shouldn't default to this server.
+DEFAULT_SERVER = 'translate.erikprice.net'
+DEFAULT_PORT   = 80
+
+
 class TranslateActivity(activity.Activity):
 
     def __init__(self, handle):
@@ -47,9 +53,11 @@ class TranslateActivity(activity.Activity):
         self._logger = logging.getLogger('Translate')
         self._logger.info('Starting translate activity')
 
-        # XXX: This really needs to be configurable.
+        # XXX: Perhaps spin up a local server instead of specifying an invalid
+        #      one?
         self.client = translate.client.Client(
-            'translate.erikprice.net', port=80)
+            os.environ.get('TRANSLATE_SERVER', DEFAULT_SERVER),
+            port=os.environ.get('TRANSLATE_PORT', DEFAULT_PORT))
 
         toolbar_box = ToolbarBox()
         activity_button = widgets.ActivityToolbarButton(self)
