@@ -38,7 +38,7 @@ from translate.client.exceptions import TranslateException
 
 # XXX: Probably shouldn't default to this server.
 DEFAULT_SERVER = 'translate.erikprice.net'
-DEFAULT_PORT   = 80
+DEFAULT_PORT = 80
 
 
 class TranslateActivity(activity.Activity):
